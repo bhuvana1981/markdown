@@ -1,14 +1,16 @@
-# Deployment Guide for ARS Frontend Application
+# Deployment Guide for ARS Backend Application
 
-This guide provides a simple walkthrough for deploying the ARS frontend application using **AWS CodeBuild** and **Ansible**.
+This guide outlines the steps to deploy the ARS backend application using **AWS CodeBuild** and **Ansible**.
 
 ---
 
 ## Prerequisites
 
-1. Access to the **AWS Console** with the correct role.
-2. Ensure the appropriate CodeBuild project exists (e.g., `ansible-deploy-dev`).
-3. Verify that all necessary configurations are in place.
+- Access to the **AWS Console** with the appropriate IAM role.
+- Knowledge of the environment to deploy (e.g., `dev`, `prod`).
+- Ensure the required CodeBuild projects are available:
+  - Artifact promotion project.
+  - Ansible deployment project for the desired environment.
 
 ---
 
@@ -18,36 +20,56 @@ This guide provides a simple walkthrough for deploying the ARS frontend applicat
 1. Open the [AWS Console](https://aws.amazon.com/console/).
 2. Assume the correct IAM role for deployment.
 
-### 2. Navigate to the Deployment Project
-1. Go to **CodeBuild** in the AWS Console.
-2. Search for the project corresponding to the environment (e.g., `ansible-deploy-dev`).
+---
 
-### 3. Start the Build with Overrides
-1. Select the **Start Build** button for the project.
-2. In the **Start Build** dialog:
-   - **Source Override**: Specify the appropriate source repository.
-   - **Environment Variables**:
-     - Key: `RUN_VARIABLE`
-     - Value: `run_deployARSWEB`
+### 2. Promote Artifacts
+1. Navigate to **AWS CodeBuild** in the console.
+2. Locate the project responsible for promoting build artifacts (e.g., `build-artifacts`).
+3. Click **Start Build**.
+4. In the **Overrides** section:
+   - Add the environment variable:
+     - **Key**: `RUN_VARIABLE`
+     - **Value**: `run_promoteArtifacts`
+5. Click **Start Build** to promote the artifacts.
 
-3. Confirm the configurations and click **Start Build**.
+---
+
+### 3. Deploy the Backend Application
+1. Navigate to **AWS CodeBuild**.
+2. Locate the Ansible deployment project for the environment (e.g., `ansible-deploy-dev`).
+3. Click **Start Build**.
+4. In the **Overrides** section:
+   - Add the environment variable:
+     - **Key**: `RUN_VARIABLE`
+     - **Value**: `run_deployBackend`
+5. Click **Start Build** to deploy the backend application.
+
+---
 
 ### 4. Verify Deployment
-1. Check the **Build Logs** to ensure the deployment was successful.
-2. Validate the application:
-   - Ensure the deployed package is functioning as expected.
-   - Refer to the generated log file for deployment details.
+After the application deployment completes:
+
+1. Verify the deployment logs to ensure successful deployment.
+2. Review the sample log file for the following details:
+   - **Deployed Date**
+   - **Application URL**
+   - **Last Build Date**
+   - **Version**
+3. Confirm the deployed package matches the expected version.
 
 ---
 
-## Sample Log File
+## Troubleshooting
 
-Below is an example of a log file generated after deployment:
+- **Build Fails in CodeBuild**:
+  - Check the logs for any errors during the artifact promotion or deployment steps.
+  - Ensure the correct environment variables were added in the overrides section.
+
+- **Application Issues After Deployment**:
+  - Verify the deployment logs for errors.
+  - Confirm the application is accessible via the provided URL.
 
 ---
 
-## Post-Deployment Validation
+This guide ensures a smooth deployment process for the ARS backend application. Let me know if any additional details are needed!
 
-1. Verify that the **URL** is accessible and the application is functioning.
-2. Confirm the `Last Build Date` and `Version` match the expected values.
-3. If any issues occur, review the build logs in CodeBuild for troubleshooting.
