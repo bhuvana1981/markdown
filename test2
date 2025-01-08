@@ -1,0 +1,72 @@
+### Upgrading Nexus Repository Manager from 3.69 with OrientDB to the Latest Version (3.75)
+
+This document outlines the step-by-step process to upgrade Nexus Repository Manager from version 3.69 (using OrientDB) to the latest version 3.75. The process involves upgrading to an intermediate version, migrating the database to PostgreSQL or H2, and then upgrading to the latest version.
+
+---
+
+### **Step 1: Backup Current Nexus Instance**
+Before performing any upgrade or migration, ensure you back up your current Nexus installation and database.
+
+1. Stop the Nexus service.
+2. Backup the following directories:
+   - Nexus installation directory.
+   - Nexus data directory, especially the `db/` folder for OrientDB.
+3. Verify the integrity of the backup files.
+
+---
+
+### **Step 2: Upgrade to Nexus 3.70.x**
+
+1. Download Nexus 3.70.x from the Sonatype Downloads Page.
+2. Install Nexus 3.70.x and follow the official upgrade guide.
+3. Start Nexus and verify that the application starts without errors.
+4. Test the instance to ensure all repositories and configurations are intact.
+
+---
+
+### **Step 3: Migrate from OrientDB to PostgreSQL or H2**
+
+#### **3.1 Set Up PostgreSQL or H2**
+1. For PostgreSQL, install and create a Nexus database and user.
+2. For H2, no additional setup is needed as it is embedded within Nexus.
+
+#### **3.2 Configure Nexus for the New Database**
+1. Stop Nexus.
+2. Update the nexus properties file to point to the new database, either PostgreSQL or H2.
+3. Migrate the database using the migration script provided by Sonatype.
+4. Start Nexus and verify the Nexus instance is operational with the new database.
+
+---
+
+### **Step 4: Upgrade to Nexus 3.75**
+
+1. Download the latest version of Nexus from the Sonatype Downloads Page.
+2. Upgrade Nexus by replacing the binaries and preserving the data directory.
+3. Verify the Java version and ensure Java 17 is installed.
+4. Start Nexus and test the latest version to ensure all configurations and data are functioning correctly.
+
+---
+
+### **Step 5: Post-Upgrade Validation**
+
+1. Check system information in the Nexus UI to verify Java version, Nexus version, and database connection.
+2. Monitor logs for errors or warnings.
+3. Test repositories to ensure they are accessible and operational.
+4. Conduct performance testing to ensure the new database performs as expected.
+
+---
+
+### **Troubleshooting**
+- Refer to the Nexus Upgrade Guide, Database Migration Guide, or Nexus Support Forums for assistance with issues.
+
+---
+
+### **Summary Workflow**
+1. Backup your Nexus instance.
+2. Upgrade to Nexus 3.70.x.
+3. Migrate the database to PostgreSQL or H2.
+4. Upgrade to Nexus 3.75.
+5. Validate and test the upgraded system.
+
+By following these steps, you ensure a smooth and successful upgrade while maintaining system integrity and performance.
+
