@@ -1,0 +1,80 @@
+ARS PARSER File Processing Workflow
+ 
+github-actions[bot] edited this page on Jan 7 · 10 revisions
+Overview
+This documentation covers the functionality and scenarios tested for a scheduled AWS Lambda function. The Lambda function processes all the attachments from the folder attachments/for_evaluation in the S3 bucket project-ars-{app_env}-processing. The function connects to an Oracle database to determine the correct destination path for each file and performs actions based on various conditions.
+
+Lambda Function Process
+The Lambda function ars-parser-move-file is triggered on a schedule and performs the following operations:
+
+Read files from a evaluation folder in an S3 bucket.
+Connects to an Oracle database and retrieves the correct file path based on the attachment_name (i.e., the filename) from a specified database table which contains the file path.
+File transfer
+Transfers the file to the correct location in the S3 bucket if the file doesn't exists in the target folder and a notification is sent with a list of all the files moved.
+If the file already exists in the target folder, it compares the source and target files:
+If the files are identical, the source file is deleted.
+If the files differ, a notification is sent listing the files for review.
+If the path is not found or multiple paths are found, a notification is sent with the relevant details.
+Notification
+Sends email notifications to ars_parser_email_support detailing the actions taken or any issues encountered during the process.
+Scenarios Tested in DEV Environment
+No File Path Found in the Database
+Description: If the database query returns no path for a file, the Lambda function collects the filenames and sends a notification listing all files without a path.
+
+Expected Behavior:
+
+Files are not transferred.
+An email notification is sent with a list of all files without a path.
+Multiple Paths Found
+Description: If the database query returns multiple paths for a single file, the function skips processing that file, collects the filename, and sends a notification.
+
+Expected Behavior:
+
+The file remains in the evaluation folder.
+An email notification is sent with a list of all files with multiple paths.
+Files are Identical
+Description: If a file in the evaluation folder is identical to a file in the destination location (determined by byte-by-byte comparison), the function deletes the file from the evaluation folder.
+
+Expected Behavior:
+
+The file is deleted from the evaluation folder.
+No file is moved.
+Files are Not Identical
+Description: If a file in the evaluation folder differs from a file in the destination location, the function collects the filename and sends a notification for manual review.
+
+Expected Behavior:
+
+The file remains in the evaluation folder.
+An email notification is sent with a list of all files that require manual review due to content differences.
+File Path Found and File Not in Destination
+Description: If the database query returns a path and the file does not exist in the destination, the function transfers the file to the correct location, deletes the file from the evaluation folder, and sends a notification with a list of files moved.
+
+Expected Behavior:
+
+The file is moved to the correct location.
+The file is deleted from the evaluation folder.
+An email notification is sent with a list of all successfully moved files.
+How to Test
+To test the Lambda function, follow these steps:
+
+Drop Test Files into the Evaluation Folder:
+
+Place test files into the evaluation folder of the designated S3 bucket.
+Observe Lambda Execution:
+
+The Lambda function will automatically trigger based on its schedule(every day at 8:00 AM) and process the files according to the scenarios outlined.
+Review Email Notifications:
+
+After the Lambda function completes, check your email for notifications that detail the actions taken or issues encountered with the files.
+Verify File Movements:
+
+Check the S3 bucket to verify that files have been moved correctly or deleted based on the scenario.
+Database Verification:
+
+Ensure that the Oracle database returns the expected results for each test file to confirm the correct path is retrieved.
+Oracle SQL Queries
+The following SQL query is used by the Lambda function to retrieve the correct path for a file:
+
+SELECT attachment_path 
+FROM ars_owner.CLAIMATTACHMENTS_VIEW
+ WHERE attachment_name = :attachment_name;
