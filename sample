@@ -1,1 +1,66 @@
-gkuhk
+ARS PARSER File Processing Workflow
+
+Overview
+This document outlines the ARS Parser Lambda function, which processes attachments from the S3 bucket project-ars-{app_env}-processing. It determines file destinations using an Oracle database and performs file transfers based on predefined conditions.
+
+Lambda Function Process
+
+Reads files from attachments/for_evaluation in S3.
+
+Queries an Oracle database for the correct file path.
+
+Transfers files if they do not exist in the target folder and sends a notification.
+
+If the file exists, it compares source and target files:
+
+Deletes identical files from the evaluation folder.
+
+Sends a notification for differing files.
+
+Sends notifications for missing or multiple path issues.
+
+Scenarios Tested in DEV
+
+No File Path Found:
+
+File remains in evaluation folder.
+
+Notification sent listing files without a path.
+
+Multiple Paths Found:
+
+File remains in evaluation folder.
+
+Notification sent listing files with multiple paths.
+
+Files are Identical:
+
+Source file deleted.
+
+No file moved.
+
+Files are Not Identical:
+
+File remains in evaluation folder.
+
+Notification sent for manual review.
+
+File Path Found & File Not in Destination:
+
+File moved to correct location.
+
+Source file deleted.
+
+Notification sent for moved files.
+
+Testing Steps
+
+Drop Test Files: Place files in the evaluation folder.
+
+Observe Lambda Execution: Runs daily at 8:00 AM.
+
+Review Notifications: Check emails for process details.
+
+Verify File Movements: Ensure correct transfers in S3.
+
+Database Verification: Confirm path retrieval via SQL:
