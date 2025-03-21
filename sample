@@ -1,2 +1,130 @@
-sf
+    - name: configureAdmin | Debug default admin password
+      ansible.builtin.debug:
+        var: nexus_default_admin_password
+        verbosity: 1
 
+# First, check onboarding status to determine what steps are needed
+- name: configureAdmin | Check onboarding status
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_baseurl }}/internal/ui/onboarding/status"
+    method: GET
+    user: "{{ nexus_current_admin_user }}"
+    password: "{{ nexus_default_admin_password | default(nexus_admin_password) }}"
+    force_basic_auth: yes
+    status_code: 200, 404, 401, -1
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+  register: onboarding_status
+  ignore_errors: yes
+  when: admin_password_file.stat.exists
+
+- name: configureAdmin | Debug onboarding status
+  ansible.builtin.debug:
+    var: onboarding_status
+
+# Handle EULA acceptance (required in Nexus 3.77)
+- name: configureAdmin | Get Community Edition EULA Disclaimer Text
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_baseurl }}/v1/system/eula"
+    method: GET
+    user: "{{ nexus_current_admin_user }}"
+    password: "{{ nexus_default_admin_password | default(nexus_admin_password) }}"
+    force_basic_auth: yes
+    status_code: 200, 404, 401
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+    timeout: 30
+  register: eula_get_result
+  retries: 3
+  delay: 5
+  until: eula_get_result is success or eula_get_result.status in [404, 401]
+  ignore_errors: yes
+  when: admin_password_file.stat.exists
+
+- name: configureAdmin | Debug EULA GET result
+  ansible.builtin.debug:
+    var: eula_get_result
+  when: eula_get_result is defined
+
+- name: configureAdmin | Accept Community Edition EULA
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_baseurl }}/v1/system/eula"
+    method: POST
+    user: "{{ nexus_current_admin_user }}"
+    password: "{{ nexus_default_admin_password | default(nexus_admin_password) }}"
+    force_basic_auth: yes
+    body_format: json
+    body:
+      disclaimer: "{{ eula_get_result.json.disclaimer | default('Use of Sonatype Nexus Repository - Community Edition is governed by the End User License Agreement at https://links.sonatype.com/products/nxrm/ce-eula.') }}"
+      accepted: true
+    status_code: 200, 204, 400, 401
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+    timeout: 30
+  register: eula_result
+  retries: 3
+  delay: 5
+  until: eula_result is success or eula_result.status in [400, 401]
+  ignore_errors: yes
+  when: 
+    - admin_password_file.stat.exists
+    - eula_get_result is defined
+    - eula_get_result is success
+
+# Handle admin password change via onboarding endpoint for first-time setup
+- name: configureAdmin | Change admin password via onboarding endpoint
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_baseurl }}/internal/ui/onboarding/change-admin-password"
+    method: PUT
+    user: "{{ nexus_current_admin_user }}"
+    password: "{{ nexus_default_admin_password }}"
+    force_basic_auth: yes
+    body: "{{ nexus_admin_password }}"
+    body_format: raw
+    status_code: 200, 204, 401
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+  register: onboarding_password_change
+  retries: 3
+  delay: 5
+  until: onboarding_password_change is success or onboarding_password_change.status == 401
+  ignore_errors: yes
+  when:
+    - admin_password_file.stat.exists
+    - nexus_default_admin_password is defined
+
+- name: configureAdmin | Debug onboarding password change result
+  ansible.builtin.debug:
+    var: onboarding_password_change
+  when: onboarding_password_change is defined
+
+# Complete the onboarding process
+- name: configureAdmin | Finish onboarding process
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_baseurl }}/internal/ui/onboarding/finish"
+    method: POST
+    user: "{{ nexus_current_admin_user }}"
+    password: "{{ nexus_admin_password }}"
+    force_basic_auth: yes
+    status_code: 200, 204, 404, 401
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+  register: onboarding_finish
+  retries: 3
+  delay: 5
+  until: onboarding_finish is success or onboarding_finish.status in [404, 401]
+  ignore_errors: yes
+  when: 
+    - admin_password_file.stat.exists
+    - onboarding_password_change is defined
+    - onboarding_password_change is success
