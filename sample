@@ -1,17 +1,2 @@
 
-    "eula_get_result": {
-        "body": "",
-        "changed": false,
-        "connection": "close",
-        "date": "Tue, 25 Mar 2025 14:01:38 GMT",
-        "elapsed": 0,
-        "failed": false,
-        "msg": "HTTP Error 401: Unauthorized",
-        "redirected": false,
-        "server": "Nexus/3.77.2-02 (COMMUNITY)",
-        "status": 401,
-        "url": "http://localhost:8081/nexus/service/rest/v1/system/eula",
-        "www_authenticate": "BASIC realm=\"Sonatype Nexus Repository Manager\"",
-        "x_content_type_options": "nosniff"
-    }
-}
+  
