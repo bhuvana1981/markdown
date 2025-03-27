@@ -1,5 +1,123 @@
-s denied.
-2025-03-25 15:50:10,138+0000 WARN  [qtp1433047578-91]  *UNKNOWN org.sonatype.nexus.siesta.internal.AuthorizationExceptionMapper - (ID 0caf0a95-c619-49c0-989c-85820f86aa17) Response: [403] (no entity/body); mapped from: org.apache.shiro.authz.UnauthenticatedException: This subject is anonymous - it does not have any identifying principals and authorization operations require an identity to check against.  A Subject instance will acquire these identifying principals automatically after a successful login is performed be executing org.apache.shiro.subject.Subject.login(AuthenticationToken) or when 'Remember Me' functionality is enabled by the SecurityManager.  This exception can also occur when a previously logged-in Subject has logged out which makes it anonymous again.  Because an identity is currently not known due to any of these conditions, authorization is denied.
-2025-03-25 15:31:35,559+0000 ERROR [qtp1433047578-96]  *UNKNOWN com.sonatype.analytics.internal.filter.AnalyticsMeteringFilter - Error metering request RESTEASY003210: Could not find resource for full path: http://localhost:8081/nexus/service/rest/v1
-2025-03-25 15:31:40,290+0000 ERROR [qtp1433047578-91]  *UNKNOWN com.sonatype.analytics.internal.filter.AnalyticsMeteringFilter - Error metering request RESTEASY003210: Could not find resource for full path: http://localhost:8081/nexus/service/rest/v1/
-  
+Request URL:
+https://localhost/nexus/service/rest/v1/system/eula
+Request Method:
+GET
+Status Code:
+200 OK
+Referrer Policy:
+strict-origin-when-cross-origin
+connection:
+Keep-Alive
+content-length:
+401
+content-type:
+application/json
+date:
+Thu, 27 Mar 2025 16:48:43 GMT
+keep-alive:
+timeout=5, max=95
+server:
+Nexus/3.77.2-02 (COMMUNITY)
+x-content-type-options:
+nosniff
+accept:
+application/json
+accept-encoding:
+gzip, deflate, br, zstd
+accept-language:
+en-US,en;q=0.9
+connection:
+keep-alive
+cookie:
+NX-ANTI-CSRF-TOKEN=0.905225015852503; NXSESSIONID=8fb910e6-c9a0-4a7e-a258-cd7ac35ea233; _ga=GA1.1.531336430.1739995872; _parsely_visitor={%22id%22:%22pid=54d3caef-2840-4a30-9522-99323cac9e43%22%2C%22session_count%22:6%2C%22last_session_ts%22:1742943395662}; _ga_H4XVDXP21L=GS1.1.1742943397.6.0.1742943397.0.0.0; apt.sid=AP-YFGMCGUNNIFB-2-1743093596170-27196117; apt.uid=AP-YFGMCGUNNIFB-2-1743093596171-87628164.0.2.337da8ba-85a8-4446-b957-b12ff069cf4e; _ga_0C4M1PWYZ7=GS1.1.1743093596.18.0.1743093598.0.0.0; _ga_T11SF3WXX2=GS1.1.1743093597.17.0.1743093598.59.0.0; _ga_K2SPJK2C73=GS1.1.1743093597.17.0.1743093598.59.0.0
+host:
+localhost
+nx-anti-csrf-token:
+0.905225015852503
+referer:
+
+sec-ch-ua:
+"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"
+sec-ch-ua-mobile:
+?0
+sec-ch-ua-platform:
+"Windows"
+sec-fetch-dest:
+empty
+sec-fetch-mode:
+cors
+sec-fetch-site:
+same-origin
+user-agent:
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36
+x-nexus-ui:
+true
+
+
+
+
+Request URL:
+https://localhost/nexus/service/extdirect/poll/rapture_State_get
+Request Method:
+POST
+Status Code:
+200 OK
+
+Referrer Policy:
+strict-origin-when-cross-origin
+connection:
+Keep-Alive
+content-length:
+77
+content-type:
+application/json;charset=utf-8
+date:
+Thu, 27 Mar 2025 16:49:51 GMT
+keep-alive:
+timeout=5, max=98
+server:
+Nexus/3.77.2-02 (COMMUNITY)
+x-content-type-options:
+nosniff
+x-frame-options:
+DENY
+accept:
+*/*
+accept-encoding:
+gzip, deflate, br, zstd
+accept-language:
+en-US,en;q=0.9
+connection:
+keep-alive
+content-length:
+4124
+content-type:
+application/x-www-form-urlencoded; charset=UTF-8
+cookie:
+NX-ANTI-CSRF-TOKEN=0.905225015852503; NXSESSIONID=8fb910e6-c9a0-4a7e-a258-cd7ac35ea233; _ga=GA1.1.531336430.1739995872; _parsely_visitor={%22id%22:%22pid=54d3caef-2840-4a30-9522-99323cac9e43%22%2C%22session_count%22:6%2C%22last_session_ts%22:1742943395662}; _ga_H4XVDXP21L=GS1.1.1742943397.6.0.1742943397.0.0.0; apt.sid=AP-YFGMCGUNNIFB-2-1743093596170-27196117; apt.uid=AP-YFGMCGUNNIFB-2-1743093596171-87628164.0.2.337da8ba-85a8-4446-b957-b12ff069cf4e; _ga_0C4M1PWYZ7=GS1.1.1743093596.18.0.1743093598.0.0.0; _ga_T11SF3WXX2=GS1.1.1743093597.17.0.1743093598.59.0.0; _ga_K2SPJK2C73=GS1.1.1743093597.17.0.1743093598.59.0.0
+host:
+localhost
+nx-anti-csrf-token:
+0.905225015852503
+origin:
+https://localhost
+referer:
+https://localhost/nexus/
+sec-ch-ua:
+"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"
+sec-ch-ua-mobile:
+?0
+sec-ch-ua-platform:
+"Windows"
+sec-fetch-dest:
+empty
+sec-fetch-mode:
+cors
+sec-fetch-site:
+same-origin
+user-agent:
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36
+x-nexus-ui:
+true
+x-requested-with:
+XMLHttpRequest
