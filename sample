@@ -1,1 +1,66 @@
+- name: configureAdmin | Encode credentials for Basic Authentication with default password
+  ansible.builtin.set_fact:
+    nexus_default_auth_header: "Basic {{ ('admin:' ~ nexus_default_admin_password) | b64encode }}"
 
+- name: configureAdmin | Encode credentials for Basic Authentication with new admin password
+  ansible.builtin.set_fact:
+    nexus_auth_header: "Basic {{ (nexus_current_admin_user ~ ':' ~ nexus_admin_password) | b64encode }}"
+
+### ✅ GET EULA Status with default credentials (allowing 401)
+- name: configureAdmin | Check EULA status with default credentials
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}/service/rest/v1/system/eula"
+    method: GET
+    headers:
+      Authorization: "{{ nexus_default_auth_header }}"
+      Content-Type: "application/json"
+      Accept: "application/json"
+    status_code: 200, 401, 404
+    validate_certs: "{{ nexus_api_validate_certs }}"
+  register: eula_get_response_default
+
+- name: configureAdmin | Debug output of EULA GET response with default credentials
+  ansible.builtin.debug:
+    var: eula_get_response_default
+
+### ✅ GET EULA Status with new admin credentials (expecting 200)
+- name: configureAdmin | Check EULA status with new admin credentials
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}/service/rest/v1/system/eula"
+    method: GET
+    headers:
+      Authorization: "{{ nexus_auth_header }}"
+      Content-Type: "application/json"
+      Accept: "application/json"
+    status_code: 200
+    validate_certs: "{{ nexus_api_validate_certs }}"
+  register: eula_get_response_new
+
+- name: configureAdmin | Debug output of EULA GET response with new admin credentials
+  ansible.builtin.debug:
+    var: eula_get_response_new
+
+### ✅ POST to Accept EULA (Only if Not Accepted) - using default credentials
+- name: configureAdmin | Accept Nexus EULA with default credentials if not already accepted
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}/service/rest/v1/system/eula"
+    method: POST
+    body_format: json
+    status_code: 200
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Authorization: "{{ nexus_default_auth_header }}"
+      Content-Type: "application/json"
+      Accept: "application/json"
+    body: >
+      {
+        "disclaimer": "Use of Sonatype Nexus Repository - Community Edition is governed by the End User License Agreement at https://links.sonatype.com/products/nxrm/ce-eula. By returning the value from 'accepted:false' to 'accepted:true', you acknowledge that you have read and agree to the End User License Agreement at https://links.sonatype.com/products/nxrm/ce-eula.",
+        "accepted": true
+      }
+  register: eula_post_response_default
+  when: "'accepted' in eula_get_response_default.json and not eula_get_response_default.json.accepted"
+
+- name: configureAdmin | Debug output of EULA POST response with default credentials
+  ansible.builtin.debug:
+    var: eula_post_response_default
+  when: eula_post_response_default is defined
