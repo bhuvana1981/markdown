@@ -1,103 +1,59 @@
-- name: configureAdmin | Check if admin.password file exists
-  ansible.builtin.stat:
-    path: "{{ nexus_data_dir }}/admin.password"
-  register: admin_password_file
+2025-04-02 20:35:52,571+0000 ERROR [ForkJoinPool.commonPool-worker-1]  *SYSTEM org.sonatype.nexus.internal.node.datastore.LocalNodeAccess - Failed to determine hostname, using nodeId instead.
+        at org.sonatype.nexus.internal.web.ErrorPageFilter.doFilter(ErrorPageFilter.java:81)
+2025-04-02 20:36:40,210+0000 WARN  [qtp857732012-27]  nexus_admin org.sonatype.nexus.siesta.internal.UnexpectedExceptionMapper - (ID 67b2eb35-bca0-4c70-abb0-44af707037be) Response: [500] 'ERROR: (ID 67b2eb35-bca0-4c70-abb0-44af707037be) java.lang.IllegalArgumentException: EULA has alreadybeen accepted'; mapped from: java.lang.IllegalArgumentException: EULA has already been accepted
+2025-04-02 20:36:45,123+0000 ERROR [quartz-8-thread-16]  *TASK com.sonatype.nexus.risk.riskondisk.MaliciousRiskRegistriesCacheHelper - Error fetching and caching enabled registries: class org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey cannot be cast to class java.security.interfaces.XECPublicKey (org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey is in unnamed module of loader org.springframework.boot.loader.launch.LaunchedClassLoader @1ddc4ec2; java.security.interfaces.XECPublicKey is in module java.base of loader 'bootstrap')
+2025-04-02 20:43:48,761+0000 ERROR [qtp857732012-26]  *UNKNOWN com.sonatype.nexus.risk.riskondisk.MaliciousRiskOnDiskCacheHelper - Error fetching and caching risk on disk count class org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey cannot be cast to class java.security.interfaces.XECPublicKey (org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey is in unnamed module of loader org.springframework.boot.loader.launch.LaunchedClassLoader @1ddc4ec2; java.security.interfaces.XECPublicKey is in module java.base of loader 'bootstrap')
+        at org
 
-- name: configureAdmin | Read default admin password from file
-  ansible.builtin.shell: cat {{ nexus_data_dir }}/admin.password
-  register: default_admin_password_content
-  when: admin_password_file.stat.exists
-  no_log: true
-
-- name: configureAdmin | Set default admin password fact
+- name: acceptEula | Encode credentials for Basic Authentication
   ansible.builtin.set_fact:
-    nexus_default_admin_password: "{{ default_admin_password_content.stdout | trim }}"
-  when: admin_password_file.stat.exists
-  no_log: true
+    nexus_auth_header: "Basic {{ (nexus_current_admin_user + ':' + nexus_current_admin_password) | b64encode }}"
 
-- name: configureAdmin | Set fallback default password
-  ansible.builtin.set_fact:
-    nexus_default_admin_password: "admin123"
-  when: not admin_password_file.stat.exists
-  no_log: true
-
-- name: configureAdmin | Debug admin password file existence
+- name: acceptEula | Output authentication header
   ansible.builtin.debug:
-    msg: "Admin password file exists: {{ admin_password_file.stat.exists | default(false) }}"
+    var: nexus_auth_header
+    verbosity: 3
 
-- name: configureAdmin | Set API URL
-  ansible.builtin.set_fact:
-    nexus_api_url: "{{ nexus_api_scheme }}://{{ nexus_api_hostname }}:{{ nexus_api_port }}{{ nexus_api_context_path }}"
-
-- name: configureAdmin | Set current admin user and password based on installation state
-  ansible.builtin.set_fact:
-    nexus_current_admin_user: "{{ 'admin' if admin_password_file.stat.exists else nexus_admin_user }}"
-    nexus_current_admin_password: "{{ nexus_default_admin_password if admin_password_file.stat.exists else nexus_admin_password }}"
-  no_log: true
-
-# Try all possible authentication combinations
-- name: configureAdmin | Generate auth headers for all credential combinations
-  ansible.builtin.set_fact:
-    auth_headers:
-      default: "Basic {{ ('admin:' ~ nexus_default_admin_password) | b64encode }}"
-      configured: "Basic {{ (nexus_admin_user ~ ':' ~ nexus_admin_password) | b64encode }}"
-      current: "Basic {{ (nexus_current_admin_user ~ ':' ~ nexus_current_admin_password) | b64encode }}"
-  no_log: true
-
-- name: configureAdmin | Test authentication with default credentials
+- name: acceptEula | Check EULA status with auth header
   ansible.builtin.uri:
-    url: "{{ nexus_api_url }}/service/rest/v1/status/check"
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_eula_endpoint }}"
     method: GET
     headers:
-      Authorization: "{{ auth_headers.default }}"
-    status_code: 200, 401, 403
-    validate_certs: "{{ nexus_api_validate_certs | default(false) }}"
-  register: auth_test_default
-  ignore_errors: true
+      Authorization: "{{ nexus_auth_header }}"
+      Content-Type: "application/json"
+      Accept: "application/json"
+    status_code: 200, 401
+    validate_certs: "{{ nexus_api_validate_certs }}"
+  register: eula_get_response
 
-- name: configureAdmin | Test authentication with configured credentials
-  ansible.builtin.uri:
-    url: "{{ nexus_api_url }}/service/rest/v1/status/check"
-    method: GET
-    headers:
-      Authorization: "{{ auth_headers.configured }}"
-    status_code: 200, 401, 403
-    validate_certs: "{{ nexus_api_validate_certs | default(false) }}"
-  register: auth_test_configured
-  ignore_errors: true
-
-- name: configureAdmin | Test authentication with current credentials
-  ansible.builtin.uri:
-    url: "{{ nexus_api_url }}/service/rest/v1/status/check"
-    method: GET
-    headers:
-      Authorization: "{{ auth_headers.current }}"
-    status_code: 200, 401, 403
-    validate_certs: "{{ nexus_api_validate_certs | default(false) }}"
-  register: auth_test_current
-  ignore_errors: true
-
-- name: configureAdmin | Debug auth test results
+- name: acceptEula | Show output of EULA GET response with default credentials
   ansible.builtin.debug:
-    msg:
-      - "Default auth result: {{ auth_test_default.status }}"
-      - "Configured auth result: {{ auth_test_configured.status }}"
-      - "Current auth result: {{ auth_test_current.status }}"
-
-- name: configureAdmin | Determine working auth header
+    msg: |
+     server is {{ eula_get_response.server }}
+     status is {{ eula_get_response.status }}
+     json is {{ eula_get_response.json | to_json }}
+- name: acceptEula | Set body for response
   ansible.builtin.set_fact:
-    working_auth_header: "{{ auth_headers.default if auth_test_default.status == 200 else 
-                           (auth_headers.configured if auth_test_configured.status == 200 else 
-                           (auth_headers.current if auth_test_current.status == 200 else '')) }}"
-    has_working_credentials: "{{ auth_test_default.status == 200 or auth_test_configured.status == 200 or auth_test_current.status == 200 }}"
-  no_log: true
+    eula_body:
+      disclaimer: "{{ eula_get_response.json.disclaimer }}"
+      accepted: 'true'
 
-- name: configureAdmin | Debug credential status
+- name: acceptEula | Accept Nexus EULA if not already accepted
+  ansible.builtin.uri:
+    url: "{{ nexus_api_url }}{{ nexus_rest_api_eula_endpoint }}"
+    method: POST
+    body_format: json
+    status_code: 204
+    validate_certs: "{{ nexus_api_validate_certs }}"
+    headers:
+      Authorization: "{{ nexus_auth_header }}"
+      Content-Type: "application/json"
+      Accept: "application/json"
+    body: "{{ eula_body }}"
+  register: eula_post_response
+
+- name: acceptEula | Show output of EULA POST response with default credentials
   ansible.builtin.debug:
-    msg: "Has working credentials: {{ has_working_credentials }}"
-
-- name: configureAdmin | Fail if no working credentials found
-  ansible.builtin.fail:
-    msg: "Unable to authenticate with any credential combination. Please check Nexus configuration."
-  when: not has_working_credentials
+    var: eula_post_response.json
+  when: eula_post_response.json is defined
 
