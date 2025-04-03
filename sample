@@ -1,32 +1,4 @@
--Xms{{ nexus_min_heap_size }}
--Xmx{{ nexus_max_heap_size }}
--XX:MaxDirectMemorySize={{ nexus_max_direct_memory }}
--XX:+UnlockDiagnosticVMOptions
--XX:+LogVMOutput
--XX:LogFile=/var/log/nexus/jvm.log
--XX:ErrorFile=/var/log/nexus/java_error.log
--XX:-OmitStackTraceInFastThrow
--XX:+UseG1GC
--XX:+ExplicitGCInvokesConcurrent
--XX:+AlwaysPreTouch
--XX:+ParallelRefProcEnabled
--Dcom.redhat.fips=false
--Djava.io.tmpdir=../sonatype-work/nexus3/tmp
--Djava.net.preferIPv4Stack=true
--Djava.util.logging.config.file=etc/karaf/java.util.logging.properties
--Djava.home=/usr/lib/jvm/java-17-openjdk-17.0.14.0.7-3.el8.x86_64
--Djdk.tls.ephemeralDHKeySize=2048
--Xbootclasspath/a:lib/org.apache.karaf.specs.locator-4.3.9.jar
---add-opens=java.base/java.lang=ALL-UNNAMED
---add-opens=java.base/java.util=ALL-UNNAMED
---add-opens=java.base/java.net=ALL-UNNAMED
---add-opens=java.base/java.util.concurrent=ALL-UNNAMED
---add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED
---add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED
--Dkaraf.base=.
--Dkaraf.data={{ nexus_data_dir }}
--Dkaraf.etc=etc/karaf
--Dkaraf.home=.
--Dkaraf.log=/var/log/nexus
--Dkaraf.startLocalConsole=false
--Duser.timezone={{ nexus_timezone }}
+        ... 145 common frames omitted
+2025-04-03 19:49:37,798+0000 WARN  [qtp1756064432-25]  *UNKNOWN org.sonatype.nexus.siesta.internal.UnexpectedExceptionMapper - (ID a900fcb2-9a82-4272-a54e-301c0a317bf4) Response: [500] 'ERROR: (ID a900fcb2-9a82-4272-a54e-301c0a317bf4) javax.net.ssl.SSLException: class org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey cannot be cast to class java.security.interfaces.XECPublicKey (org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey is in unnamed module of loader org.springframework.boot.loader.launch.LaunchedClassLoader @4fca772d; java.security.interfaces.XECPublicKey is in module java.base of loader 'bootstrap')'; mapped from: javax.net.ssl.SSLException: class org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey cannot be cast to class java.security.interfaces.XECPublicKey (org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey is in unnamed module of loader org.springframework.boot.loader.launch.LaunchedClassLoader @4fca772d; java.security.interfaces.XECPublicKey is in module java.base of loader 'bootstrap')
+2025-04-03 19:49:37,940+0000 WARN  [qtp1756064432-30]  *UNKNOWN org.sonatype.nexus.siesta.internal.UnexpectedExceptionMapper - (ID d5d5fd95-0b7d-4755-b336-3dff8bf645cb) Unexpected exception: javax.net.ssl.SSLException: class org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey cannot be cast to class java.security.interfaces.XECPublicKey (org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey is in unnamed module of loader org.springframework.boot.loader.launch.LaunchedClassLoader @4fca772d; java.security.interfaces.XECPublicKey is in module java.base of loader 'bootstrap')
+javax.net.ssl.SSLException: class org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey cannot be cast to class java.security.interfaces.XECPublicKey (org.bouncycastle.jcajce.provider.asymmetric.edec.BCXDHPublicKey is in unnamed module of loader org.springframework.boot.loader.launch.LaunchedClassLoader @4fca772d; java.security.interfaces.XECPublicKey is in module java.base of loader 'bootstrap')
