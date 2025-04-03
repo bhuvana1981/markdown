@@ -1,1 +1,32 @@
-
+-Xms{{ nexus_min_heap_size }}
+-Xmx{{ nexus_max_heap_size }}
+-XX:MaxDirectMemorySize={{ nexus_max_direct_memory }}
+-XX:+UnlockDiagnosticVMOptions
+-XX:+LogVMOutput
+-XX:LogFile=/var/log/nexus/jvm.log
+-XX:ErrorFile=/var/log/nexus/java_error.log
+-XX:-OmitStackTraceInFastThrow
+-XX:+UseG1GC
+-XX:+ExplicitGCInvokesConcurrent
+-XX:+AlwaysPreTouch
+-XX:+ParallelRefProcEnabled
+-Dcom.redhat.fips=false
+-Djava.io.tmpdir=../sonatype-work/nexus3/tmp
+-Djava.net.preferIPv4Stack=true
+-Djava.util.logging.config.file=etc/karaf/java.util.logging.properties
+-Djava.home=/usr/lib/jvm/java-17-openjdk-17.0.14.0.7-3.el8.x86_64
+-Djdk.tls.ephemeralDHKeySize=2048
+-Xbootclasspath/a:lib/org.apache.karaf.specs.locator-4.3.9.jar
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.net=ALL-UNNAMED
+--add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED
+--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED
+-Dkaraf.base=.
+-Dkaraf.data={{ nexus_data_dir }}
+-Dkaraf.etc=etc/karaf
+-Dkaraf.home=.
+-Dkaraf.log=/var/log/nexus
+-Dkaraf.startLocalConsole=false
+-Duser.timezone={{ nexus_timezone }}
