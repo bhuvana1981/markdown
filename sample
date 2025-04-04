@@ -1,1 +1,5 @@
+-Dorg.bouncycastle.ec.disable_mqv=true
+-Dorg.bouncycastle.jsse.client.enableStatusRequestExtension=false
+-Dorg.bouncycastle.jsse.server.enableStatusRequestExtension=false
+-Dorg.bouncycastle.jsse.provider.enableIntrinsicImplementations=false
 
