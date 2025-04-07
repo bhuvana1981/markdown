@@ -1,11 +1,11 @@
-- name: Set APP_JAVA_HOME in systemd service using existing JAVA_HOME
-  lineinfile:
-    path: /etc/systemd/system/nexus.service
-    regexp: '^Environment=APP_JAVA_HOME='
-    line: 'Environment=APP_JAVA_HOME={{ lookup("env", "JAVA_HOME") }}'
-    create: yes
-  notify: restart_nexus_service
+- name: Get JAVA_HOME from target host
+  shell: echo $JAVA_HOME
+  register: java_home_result
 
-- name: Reload systemd after service file change
-  systemd:
-    daemon_reload: yes
+- name: Set APP_JAVA_HOME in [Service] section
+  blockinfile:
+    path: /etc/systemd/system/nexus.service
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: Set APP_JAVA_HOME"
+    block: |
+      Environment=APP_JAVA_HOME={{ java_home_result.stdout }}
+  notify: restart_nexus_service
