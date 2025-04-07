@@ -1,15 +1,11 @@
-# Priority list of jvm location
-# APP_JAVA_HOME environement variable
-# INSTALL4J_JAVA_HOME_OVERRIDE environement variable (deprecated)
-# app_java_home variable from nexus.rc file
-# EMBEDDED_JDK as configured earlier in script
-if [ -n "$APP_JAVA_HOME" ]; then
-  app_java_home=$APP_JAVA_HOME
-elif [ -n "$INSTALL4J_JAVA_HOME_OVERRIDE" ]; then
-  app_java_home=$INSTALL4J_JAVA_HOME_OVERRIDE
-fi
+- name: Set APP_JAVA_HOME in systemd service using existing JAVA_HOME
+  lineinfile:
+    path: /etc/systemd/system/nexus.service
+    regexp: '^Environment=APP_JAVA_HOME='
+    line: 'Environment=APP_JAVA_HOME={{ lookup("env", "JAVA_HOME") }}'
+    create: yes
+  notify: restart_nexus_service
 
-# app_java_home may be set by above if statement, or from the nexus.rc file
-if [ -z "$app_java_home" ]; then
-  app_java_home="$EMBEDDED_JDK"
-fi
+- name: Reload systemd after service file change
+  systemd:
+    daemon_reload: yes
