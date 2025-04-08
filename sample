@@ -1,11 +1,1 @@
-- name: Get JAVA_HOME from target host
-  shell: echo $JAVA_HOME
-  register: java_home_result
 
-- name: Set APP_JAVA_HOME in [Service] section
-  blockinfile:
-    path: /etc/systemd/system/nexus.service
-    marker: "# {mark} ANSIBLE MANAGED BLOCK: Set APP_JAVA_HOME"
-    block: |
-      Environment=APP_JAVA_HOME={{ java_home_result.stdout }}
-  notify: restart_nexus_service
