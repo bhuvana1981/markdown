@@ -1,1 +1,15 @@
-  
+ if [ -n "$last_tag_hash" ]; then
+      raw_tag=$(git tag --contains "$last_tag_hash" | grep -E '^v[0-9]' | sort -V | tail -1)
+    else
+      raw_tag=$(git tag -l 'v[0-9]*' | sort -V | tail -1)
+    fi
+
+    clean_tag=$(echo "$raw_tag" | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+
+    if [[ -z "$clean_tag" ]]; then
+      echo "No valid version tag found. Falling back to ref_version: $ref_version"
+      clean_tag="$ref_version"
+    fi
+
+    echo "latest_release_tag=$clean_tag" >> $GITHUB_ENV
+    echo "TIMESTAMP=$(date "+%s")" >> $GITHUB_ENV  
