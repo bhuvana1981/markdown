@@ -1,1 +1,52 @@
+ - name: Set Branch
+        id: get_branch
+        run: |
+          if ${{ github.event_name == 'pull_request' }}
+          then
+            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          fi
+          echo "COMMIT_ID=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
+          echo "BUILD_ID=$(echo ${GITHUB_RUN_NUMBER})" >> $GITHUB_ENV
+          # Fetch all tags and sort them using version numer
+          # Extract only the version portion and remove any trailing text
+          git fetch --tags
+
+          ref_version=${ref_version:-'2.4.1'}
+          tagregex='Release-v[0-9]*'
+          if [ $ref_version != '2.4.1' ]
+          then
+            echo "reference version is $ref_version"
+            tagregex="Release-v${ref_version}*"
+          fi
+          echo "regex is $tagregex"
+          last_tag_hash=$(git rev-list --max-count=1 --tags=${tagregex})
+          if [ -n $last_tag_hash ]
+          then
+            echo "latest_release_tag=$(echo $(git tag --contains ${last_tag_hash} | grep v[0-9] | sort -V | tail -1) | sed 's/^Release-v//;s/-.*//')" >> $GITHUB_ENV
+          else
+            echo "latest_release_tag=$(echo $(git tag -l | grep Release- | sort -V | tail -n1) | sed 's/^Release-v//;s/-.*//')" >> $GITHUB_ENV
+          fi
+          echo "TIMESTAMP=$(date "+%s")" >> ${GITHUB_ENV}
+
+      - name: Test validity of last_release_tag
+        id: reset_last_release_tag
+        run: |
+          ref_version=${ref_version:-'2.4.1'}
+          echo "ref_version: ${ref_version}"
+          if [[ $latest_release_tag == '' ]]
+          then
+            echo "unable to determine latest release tag, start from base"
+            echo "latest_release_tag=$ref_version" >> $GITHUB_ENV
+          fi
+
+      - name: Output Variables
+        run: |
+          echo GitHub REF is ${GITHUB_REF}
+          echo branch name is $BRANCH_NAME
+          echo commit ID is $COMMIT_ID
+          echo TimeStamp is $TIMESTAMP
+          echo latest_release_tag is $latest_release_tag
+          echo BUILD_ID is $BUILD_ID
 
