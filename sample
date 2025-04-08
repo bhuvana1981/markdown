@@ -1,1 +1,46 @@
+- name: upgrade nexus database
+  include_tasks: ../tasks/upgradenexusdatabase.yml
+  when: nexus_migrate_database | default(false) | bool
 
+- name: Forcefully remove bundled JDK directory
+  file:
+    path: "{{ nexus_installation_dir }}/jdk/termiun/jdk_17"
+    state: absent
+  become: yes
+  register: removal_result
+
+- name: Debug JDK directory removal result
+  debug:
+    msg: "JDK directory removal: {{ 'Failed' if removal_result.failed else 'Successful' }}"
+
+- name: Create symlink to system JDK
+  file:
+    src: "/path/to/your/openjdk17"  # Replace with your actual OpenJDK path
+    dest: "{{ nexus_installation_dir }}/jdk/termiun/jdk_17"
+    state: link
+  become: yes
+  register: symlink_result
+  ignore_errors: yes
+
+- name: Debug symlink creation result
+  debug:
+    msg: "Symlink creation: {{ 'Failed' if symlink_result.failed else 'Successful' }}"
+
+- name: Restart Nexus service after JDK modifications
+  command: /bin/true
+  changed_when: true
+  notify: restart_nexus_service
+
+# Define your handlers
+handlers:
+  - name: reload systemd
+    systemd:
+      daemon_reload: yes
+    listen: restart_nexus_service
+
+  - name: restart_service_nexus.service
+    systemd:
+      name: nexus
+      state: restarted
+      daemon_reload: yes
+    listen: restart_nexus_service
