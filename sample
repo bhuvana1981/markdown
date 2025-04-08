@@ -1,1 +1,77 @@
+---
+- name: Test | Clone build artifact repo
+  hosts: "{{ var_hosts }}"
+  become: true
 
+  roles:
+    - ansible-role-awscli
+  vars:
+    github_repo_name: "ars-build-artifacts"
+    destination_directory: "/opt/tmp"
+    build_user: "{{ lookup('ansible.builtin.env', 'BUILDUSER') }}"
+    build_token: "{{ lookup('ansible.builtin.env', 'BUILDTOKEN') }}"
+    target_branch: PEDI-33881_staging_artifact_testing
+  pre_tasks:
+    - name: promoteBuildArtifact | Include all files in vars
+      include_vars:
+        dir: ../vars/ars-defaults
+        extensions:
+          - yml
+
+    - name: promoteBuildArtifact | Include playbook pre tasks
+      include_tasks: ../tasks/playbookPreTasks.yml
+
+  tasks:
+    - name: promoteBuildArtifact | Reset no log if verbosity is high enough
+      set_fact:
+        no_log_value: false
+      when: ansible_verbosity >= 3
+
+    - name: promoteBuildArtifact | Set facts for checkout
+      set_fact:
+        destination_repo: "https://{{ build_user }}:{{ build_token }}@github.com/department-of-veterans-affairs/{{ github_repo_name }}"
+
+    - name: promoteBuildArtifact | Set default facts
+      set_fact:
+        files_to_release: "{{ lookup('ansible.builtin.env', 'files_to_release') }}"
+        tag_name: "{{ lookup('ansible.builtin.env', 'tag_name') }}"
+
+    - name: promoteBuildArtifact | Get Current Epoch Date
+      set_fact:
+        current_epoch: "{{ ansible_date_time.epoch }}"
+
+    - name: promoteBuildArtifact | Create dir to clone
+      ansible.builtin.file:
+        path: "{{ destination_directory }}"
+        state: directory
+        mode: 0750
+ 
+    - name: promoteBuildArtifact | clone build artifact repo and checkout target branch
+      ansible.builtin.git: 
+        repo: "{{ destination_repo }}"
+        dest: "{{ destination_directory }}/{{ github_repo_name }}/"
+        version: "{{ target_branch | default(master) }}"
+        accept_hostkey: yes
+  
+    - name: promoteBuildArtifact | Fetch latest develop branch
+      ansible.builtin.command: git fetch origin develop
+      args:
+        chdir: "{{ destination_directory }}/{{ github_repo_name }}/"
+      tags:
+        - skip_ansible_lint
+ 
+    - name: promoteBuildArtifact | Checkout specific files files from develop to target branch
+      ansible.builtin.shell: git checkout origin/develop -- {{ item.artifact_folder }}/{{ item.filename }}
+      args:
+        chdir: "{{ destination_directory }}/{{ github_repo_name }}/"
+      loop: "{{ files_to_release }}"
+      tags:
+        - skip_ansible_lint
+
+    - name: promoteBuildArtifact | Commit and push promoted artifacts to target branch
+      ansible.builtin.shell: |
+        cd "{{ destination_directory }}/{{ github_repo_name }}"
+        git add .
+        git commit -m "ars_promoteBuildArtifacts-{{ tag_name }}_{{ current_epoch }}"
+        git tag -a {{ tag_name }}_{{ current_epoch }} -m "Tagging artifacts with version {{ tag_name }}_{{ current_epoch }}"
+        git push origin {{ target_branch | default('master') }} --tags
