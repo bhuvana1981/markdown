@@ -1,1 +1,39 @@
+git fetch --tags
+          latest_tag=$(git tag -l | sort -V | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | tail -n1)
+          cleaned_tag=$(echo "$latest_tag" | sed -E 's/^v//; s/[^0-9.].*$//')
+          echo "latest_release_tag=$cleaned_tag" >> $GITHUB_ENV
 
+
+
+
+# Default scope to patch if not set
+          scope=${scope:-patch}
+          echo "scope: ${scope}"
+
+          # Extract the latest release tag
+          latest_tag="${{ env.latest_release_tag }}"
+          echo "latest_tag: $latest_tag"
+
+          # Split version into parts
+          IFS='.' read -ra version_parts <<< "$latest_tag"
+
+          major_version="${version_parts[0]}"
+          minor_version="${version_parts[1]}"
+
+          # Clean patch version (remove any suffix like _final)
+          raw_patch="${version_parts[2]}"
+          patch_version=$(echo "$raw_patch" | sed 's/[^0-9].*//')
+
+          # Calculate next version based on scope
+          if [ "$scope" == "major" ]; then
+            next_version="$((major_version + 1)).0.0"
+          elif [ "$scope" == "minor" ]; then
+            next_version="$major_version.$((minor_version + 1)).0"
+          else
+            next_version="$major_version.$minor_version.$((patch_version + 1))"
+          fi
+
+          echo "Computed next_release_version: $next_version"
+
+          # Export to GitHub env
+          echo "next_release_version=$next_version" >> $GITHUB_ENV
