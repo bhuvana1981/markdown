@@ -1,1 +1,14 @@
+- name: Assert JDK directory was successfully removed
+  assert:
+    that: not jdk_removal.failed
+    fail_msg: "Failed to remove bundled JDK directory"
+    success_msg: "Successfully removed bundled JDK directory"
+  when: jdk_removal is defined
 
+
+try:
+            move_and_compare_files(bucket_name, f"{folder_name}{filename}", destination_key, destination_path, files_with_conflicts, files_copied)
+          except Exception as e:
+            logger.error("Error moving or comparing file %s: %s", filename, str(e))
+            files_with_conflicts.append(filename)  # Add to conflict list for manual review
+      except Exception as e:
