@@ -1,100 +1,173 @@
-- name: Test | Clone build artifact repo
-  hosts: "{{ var_hosts }}"
-  become: true
+name: build-ars-web
 
-  roles:
-    - ansible-role-awscli
-  vars:
-    github_repo_name: "ars-build-artifacts"
-    destination_directory: "/opt/tmp"
-    build_user: "{{ lookup('ansible.builtin.env', 'BUILDUSER') }}"
-    build_token: "{{ lookup('ansible.builtin.env', 'BUILDTOKEN') }}"
-    target_branch: PEDI-33881_staging_artifact_testing
-  pre_tasks:
-    - name: promoteBuildArtifact | Include all files in vars
-      include_vars:
-        dir: ../vars/ars-defaults
-        extensions:
-          - yml
+# Controls when the action will run.
+on:
+  push:
+    branches-ignore:
+      - 'gh_pages'
+    tags-ignore:
+      - '*.*' # We don't want this to run on release
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ develop,'Release-*' ]
+    paths-ignore:
+      - '**.md'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        description: What type of release
+        required: true
+        default: "patch"
+        options:
+          - major
+          - minor
+          - patch
+permissions:
+  id-token: write
+  contents: write
+  actions: write
+env:
+  APP_PROJ_NAME: 'ars-web'
+  scope: "${{ github.event.inputs.scope }}"
 
-    - name: promoteBuildArtifact | Include playbook pre tasks
-      include_tasks: ../tasks/playbookPreTasks.yml
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  pre_job:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          # All of these options are optional, so you can remove them if you are happy with the defaults
+          concurrent_skipping: 'same_content'
+          cancel_others: 'true'
+          skip_after_successful_duplicate: 'true'
+          paths_ignore: '["**/README.md", "**/docs/**"]'
+          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
+  build:
+    name: build
+    needs: pre_job
+    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - node-version: 20.x
+            experimental: false
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  tasks:
-    - name: promoteBuildArtifact | Reset no log if verbosity is high enough
-      set_fact:
-        no_log_value: false
-      when: ansible_verbosity >= 3
+      - name: Set Branch
+        id: get_branch
+        run: |
+          if ${{ github.event_name == 'pull_request' }}
+          then
+            echo "BRANCH_NAME=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          fi
+          echo "COMMIT_ID=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
+          echo "BUILD_ID=$(echo ${GITHUB_RUN_NUMBER})" >> $GITHUB_ENV
+          # Fetch all tags and sort them using version numer
+          # Extract only the version portion and remove any trailing text
+          git fetch --tags
+          echo "latest_release_tag=$(echo $(git tag -l | sort -V | tail -n1) | sed 's/^v//;s/-.*//')" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date "+%s")" >> ${GITHUB_ENV}
 
-    - name: promoteBuildArtifact | Set facts for checkout
-      set_fact:
-        destination_repo: "https://{{ build_user }}:{{ build_token }}@github.com/department-of-veterans-affairs/{{ github_repo_name }}"
+      - name: Output Variables
+        run: |
+          echo GitHub REF is ${GITHUB_REF}
+          echo branch name is $BRANCH_NAME
+          echo commit ID is $COMMIT_ID
+          echo TimeStamp is $TIMESTAMP
+          echo latest_release_tag is $latest_release_tag
+          echo BUILD_ID is $BUILD_ID
 
-    - name: promoteBuildArtifact | Set default facts
-      set_fact:
-        files_to_release: "{{ lookup('ansible.builtin.env', 'files_to_release') }}"
-        tag_name: "{{ lookup('ansible.builtin.env', 'tag_name') }}"
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: promoteBuildArtifact | Get existing tags
-      ansible.builtin.command: git tag
-      args:
-        chdir: "{{ destination_directory }}/{{ github_repo_name }}/"
-      register: git_tags
+      - name: Set Environment variable to get next release version
+        run: |
+          scope=${scope:-patch}
+          echo "scope: ${scope}"
+          if [ "$scope" == "major" ]; then
+            IFS='.' read -ra version_parts <<< "${{env.latest_release_tag}}"
+            major_version="${version_parts[0]}"
+            next_version="$((major_version +1)).0.0" >> $GITHUB_ENV
+          elif [ "$scope" == "minor" ]; then
+            IFS='.' read -ra version_parts <<< "${{env.latest_release_tag}}"
+            major_version="${version_parts[0]}"
+            minor_version="${version_parts[1]}"
+            next_version="$major_version.$((minor_version +1)).0" >> $GITHUB_ENV
+          else
+            IFS='.' read -ra version_parts <<< "${{env.latest_release_tag}}"
+            major_version="${version_parts[0]}"
+            minor_version="${version_parts[1]}"
+            patch_version="${version_parts[2]}"
+            next_version="$major_version.$minor_version.$((patch_version +1))"
+          fi
+          echo "next_release_version=$next_version" >> $GITHUB_ENV
 
-    - name: promoteBuildArtifact | Determine next candidate number
-      set_fact:
-        candidate_number: >-
-          {{
-            (
-              git_tags.stdout_lines
-              | select('match', tag_name + r'_candidate\d+')
-              | map('regex_search', '_candidate(\\d+)', '\\1')
-              | map('int')
-              | list
-              | default([ -1 ])
-              | max + 1
-            )
-          }}
-      when: app_env in ['prep']
+      - name: Set Release version variable and Retag packageVersion for branch
+        run: |
+          echo "RELEASE_VERSION=${{env.APP_PROJ_NAME}}-${{env.next_release_version}}-${{env.COMMIT_ID}}-${{env.BUILD_ID}}.tar.gz" >> $GITHUB_ENV
+          if [[ "$BRANCH_NAME" != "master" && "$BRANCH_NAME" != "develop" ]]; then
+            echo "RELEASE_VERSION=${{env.APP_PROJ_NAME}}-${{env.next_release_version}}-${{env.COMMIT_ID}}-${{env.BUILD_ID}}-${{env.BRANCH_NAME}}.tar.gz" >> $GITHUB_ENV
+          fi
 
-    - name: promoteBuildArtifact | Set candidate suffix and release tag
-      set_fact:
-        candidate_suffix: "{{ app_env in ['prep'] | ternary('_candidate' ~ candidate_number, '') }}"
-        release_tag: "{{ tag_name }}{{ candidate_suffix }}"
+      - name: create metadata
+        run: |
+          current_date=$(date +%y%m%d_%H%M%S)
+          echo "appName=$APP_PROJ_NAME" >> $GITHUB_ENV
+          echo "distributionFileName=$RELEASE_VERSION" >> $GITHUB_ENV
+          echo "lastBuildDate=$current_date"  >> $GITHUB_ENV
+          echo "version=${{env.APP_PROJ_NAME}}-${{env.next_release_version}}-${{env.COMMIT_ID}}-${{env.BUILD_ID}}" >> $GITHUB_ENV
 
-    - name: promoteBuildArtifact | Create dir to clone
-      ansible.builtin.file:
-        path: "{{ destination_directory }}"
-        state: directory
-        mode: 0750
+      # this is a hack until they fix the frontend to read the environment.json file
+      - name: Update index.html, version.ts
+        run: |
+          sed -i "2 i\<meta name=\"distributionFileName\" content=\"${{env.RELEASE_VERSION}}\"\>" ./src/index.html
+          sed -i "2 i\<meta name=\"lastBuildDate\" content=\"${{env.lastBuildDate}}\"\>" ./src/index.html
+          sed -i "2 i\<meta name=\"version\" content=\"${{env.version}}\"\>" ./src/index.html
+          touch src/version.ts
+          echo "export const version = { version: '${{env.version}}' };" > src/version.ts
+          cat src/version.ts
 
-    - name: promoteBuildArtifact | Clone build artifact repo and checkout target branch
-      ansible.builtin.git:
-        repo: "{{ destination_repo }}"
-        dest: "{{ destination_directory }}/{{ github_repo_name }}/"
-        version: "{{ target_branch | default(master) }}"
-        accept_hostkey: yes
+      - name: Run npm clean
+        run: npm cache clean --force
 
-    - name: promoteBuildArtifact | Fetch latest develop branch
-      ansible.builtin.command: git fetch origin develop
-      args:
-        chdir: "{{ destination_directory }}/{{ github_repo_name }}/"
-      tags:
-        - skip_ansible_lint
+      - name: Run npm install
+        run: npm install
 
-    - name: promoteBuildArtifact | Checkout specific files from develop to target branch
-      ansible.builtin.shell: git checkout origin/develop -- {{ item.artifact_folder }}/{{ item.filename }}
-      args:
-        chdir: "{{ destination_directory }}/{{ github_repo_name }}/"
-      loop: "{{ files_to_release }}"
-      tags:
-        - skip_ansible_lint
+      - name: Run npm build
+        run: npm run cibuild
 
-    - name: promoteBuildArtifact | Commit and push promoted artifacts to target branch
-      ansible.builtin.shell: |
-        cd "{{ destination_directory }}/{{ github_repo_name }}"
-        git add .
-        git commit -m "ars_promoteBuildArtifacts-{{ release_tag }}"
-        git tag -a {{ release_tag }} -m "Tagging artifacts with version {{ release_tag }}"
-        git push origin {{ target_branch | default('master') }} --tags
+      - name: Run npm test with coverage
+        run: npm run test-cc
+
+      - name: Show coverage directory
+        run: find . -type d -name coverage -exec echo {} \; -exec ls -al {} \;
+        if: always()
+
+      - name: Prepare Package
+        run: |
+          tar czf ${{ env.RELEASE_VERSION }} -C ${{ github.workspace }}/dist/ .
+
+      - name: Upload the Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RELEASE_VERSION }}_NODE${{ matrix.node-version }}
+          path: ${{ github.workspace }}/${{ env.RELEASE_VERSION }}
 
